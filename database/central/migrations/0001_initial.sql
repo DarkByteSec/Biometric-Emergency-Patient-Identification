@@ -1,6 +1,6 @@
 -- Central System schema, migration 0001.
 -- Apply only to the approved Central Supabase project after review.
--- This file is prepared, not applied. All patient fixtures must be synthetic.
+-- Applied to the approved Central Dev project; Production is excluded. Use synthetic fixtures only.
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS citext;

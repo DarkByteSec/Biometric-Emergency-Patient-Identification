@@ -1,53 +1,104 @@
 # Biometric Emergency Patient Identification System
 
-A university prototype for identifying a possible patient record in an emergency workflow. **Use synthetic data and explicitly authorized test images only.** This repository is not a clinical system and must not be used to make diagnosis, treatment, transfusion or autonomous identity decisions.
+A two-part React + Flask educational prototype for searching a possible patient record and, optionally, proposing a local face-match candidate. **Use synthetic records and explicitly authorized synthetic/test images only.** This is not a clinical system and must not be used to diagnose, prescribe, make transfusion decisions, or establish identity autonomously.
 
 ## Current status
 
-- Approved planning document: [`PROJECT_MASTER_PLAN.md`](PROJECT_MASTER_PLAN.md)
-- Repository scaffold and separate Central/Hospital database migration drafts are being prepared.
-- SQL migration files have **not** been applied to Supabase or any other database.
-- No application code, service credentials, real patient data, biometric images, cloud projects or deployments are included.
-- The existing GitHub repository is public. Work from this session is being prepared locally and has not been pushed.
+- Both React + Flask applications and separate Central/Hospital PostgreSQL migrations are in the repository.
+- The versioned migrations were applied to two dedicated Supabase **development** projects and independently verified. Production was excluded. See [Supabase development verification](docs/database/SUPABASE_DEV_VERIFICATION.md).
+- The migrations also execute against disposable local PostgreSQL 16 databases. Both Flask database adapters passed real PostgreSQL/TLS smoke tests with non-superuser runtime logins.
+- Central backend: **7 tests passed**; Hospital backend: **16 tests passed**. Both frontend production builds pass. Python application lint passes. Both local pgTAP suites pass all 5 assertions.
+- No runtime login roles/URLs have been provisioned for the hosted Supabase projects, no test users or patient rows were seeded there, and no web application has been deployed. Do not connect apps using project-owner credentials. The session-level `SUPABASE_URL` is associated with Production and must not be used by either app.
 
-## Architecture
+## Architecture and safety boundary
 
-The proposed system has two independently deployable React + Flask applications. The Central System manages the synthetic patient registry and exposes a restricted HTTPS API. Each Hospital System performs face processing locally and connects to Central only through that API. Each Hospital installation has its own database and machine credential. Neither a browser nor a hospital connects directly to the Central database.
+- **Central System**: administrator console and API for a synthetic registry. National IDs are encrypted at rest and searched using a separate keyed HMAC. Hospital machine credentials are scoped and secrets are shown once.
+- **Hospital System**: independent operator console, local scan/event store, and optional local OpenCV-contrib LBPH enrollment/probe workflow. Camera probes are handled in memory and are never sent to Central. Authorized enrollment requires a local admin confirmation and a Central UUID check using `patient.enroll`; only the UUID is sent to Central.
+- A face result is a **candidate only**, never proof of identity. Manual lookup remains available. Recorded blood type/allergies may be missing or stale; laboratory typing, crossmatch, and clinical judgment remain mandatory.
+- The browser calls only its same-origin Flask API. A Hospital backend talks to the Central API over HTTPS; it never connects to the Central database.
 
 ## Repository layout
 
 ```text
-database/
-├── central/
-│   ├── migrations/   # Central Postgres migrations
-│   ├── tests/        # pgTAP grant/RLS checks
-│   └── seed/         # Synthetic fixtures, to be added in a later phase
-└── hospital/
-    ├── migrations/   # One hospital installation's local schema
-    ├── tests/        # pgTAP grant/RLS checks
-    └── seed/         # Synthetic fixtures, to be added in a later phase
-docs/database/         # Database setup and migration notes
+central-system/       Central React + Flask application
+hospital-system/      Independent Hospital React + Flask application
+ database/             Versioned Central and Hospital PostgreSQL migrations and pgTAP checks
+docs/database/         Migration workflow and hosted verification record
+PROJECT_MASTER_PLAN.md Approved project architecture and acceptance criteria
 ```
 
-The application source directories will be added in later implementation phases after the approved milestones.
+## Local development
 
-## Database migration status
+Use separate terminals. Install each backend's `requirements.txt` and frontend's `package.json` dependencies. Use synthetic data only.
 
-The current drafts are:
+**Central backend** (from `central-system/backend`):
 
-- `database/central/migrations/0001_initial.sql`
-- `database/hospital/migrations/0001_initial.sql`
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt
+export APP_ENV=development
+export CENTRAL_DATABASE_URL=sqlite:///central-demo.db
+export CENTRAL_CORS_ORIGINS=http://localhost:5173
+flask --app run.py bootstrap-admin   # interactive; no default password
+python run.py                         # 127.0.0.1:5000
+```
 
-They define only the schema, constraints, indexes, restricted runtime-role grants and RLS policies. See [`database/README.md`](database/README.md) for the intended review and application procedure. Do not run them against a live project until the target Central and Hospital projects, database roles and access permissions have been verified and application is explicitly authorized.
+**Central frontend** (from `central-system/frontend`):
 
-## Safety and security
+```bash
+npm install
+npm run dev                            # 127.0.0.1:5173
+```
 
-- Synthetic or otherwise explicitly authorized test data only.
-- Hospital credentials, database URLs, session keys and ID encryption keys must stay in server-side secret storage and out of Git and browser bundles.
-- Face recognition produces a candidate only. Staff verification and manual lookup remain available.
-- Never treat recorded blood type as a transfusion instruction; laboratory typing and crossmatching are required.
-- Do not use Flask's development server as a public production service.
+**Hospital backend** (from `hospital-system/backend`):
 
-## Next steps
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt        # includes OpenCV-contrib LBPH
+export APP_ENV=development
+export HOSPITAL_DATABASE_URL=sqlite:///hospital-demo.db
+export CENTRAL_API_BASE_URL=http://127.0.0.1:5000
+export HOSPITAL_CREDENTIAL_KEY_ID=server-side-value
+export HOSPITAL_CREDENTIAL_SECRET=server-side-value
+python cli.py bootstrap-operator --role admin  # prompts; no default password
+python run.py                          # 127.0.0.1:5001
+```
 
-Review the migration drafts and role setup in `database/README.md`. The next application milestone is repository foundation and configuration; migrations are to be applied only after the target projects and permissions are confirmed.
+**Hospital frontend** (from `hospital-system/frontend`):
+
+```bash
+npm install
+npm run dev                            # 127.0.0.1:5174
+```
+
+Local Central/Hospital credentials are configured on the **backend only**. Create and issue the Central Hospital credential through the Central admin UI after both local admin accounts have been bootstrapped. Enable only the scopes the Hospital needs (`health.read` and `patient.enroll` are opt-in). Never put the credential in a Vite environment variable or browser bundle.
+
+## Hosted development databases
+
+| System | Supabase project | Project ref | State |
+|---|---|---|---|
+| Central | BEPI Central Dev | `sdkwktvfpuiijysigxlw` | Migration applied and schema/RLS verified |
+| Hospital | Hospital Dev | `fwsdhwpjatltxlcqodfs` | Migration applied and schema/RLS verified |
+
+Both projects are in the approved organization and EU West (Paris). RLS is enabled for all 17 application tables; `anon`/`authenticated` have no table privileges; app group roles are `NOLOGIN` and cannot bypass RLS. Hosted application tables were empty after migration. A detailed record is in [`docs/database/SUPABASE_DEV_VERIFICATION.md`](docs/database/SUPABASE_DEV_VERIFICATION.md).
+
+Before connecting a hosted application, provision a separate non-superuser runtime login for each project, grant only the corresponding `central_app` or `hospital_app` role, and store its TLS connection URL and application secrets in a server-side secret store. This has **not** been done. Do not use the Supabase project-owner account in a runtime app. Do not apply these migrations to Production.
+
+## Validation
+
+```bash
+# Central backend
+cd central-system/backend && PYTHONPATH=. pytest -q && ruff check app tests
+# Central frontend
+cd central-system/frontend && npm run build
+# Hospital backend
+cd hospital-system/backend && PYTHONPATH=. pytest -q && ruff check app
+# Hospital frontend
+cd hospital-system/frontend && npm run build
+```
+
+The tests cover authentication/CSRF, Central credential scopes and response minimization, enrollment verification, local-only image behavior, candidate confirmation/rejection, safe errors, and local operational logging. Disposable local PostgreSQL execution separately exercised both migrations, PostgreSQL app adapters, login, representative database writes, scoped Central lookup, and enrollment verification.
+
+## Not yet production-ready
+
+No production environment, runtime database login, monitoring/rate limiting, backup/restore test, key rotation process, deployment hardening, penetration test, formal biometric validation, or clinical/regulatory review is included. The OpenCV LBPH workflow is educational and must not be represented as production-grade biometric identification. See the project plan and `database/README.md` before expanding scope.

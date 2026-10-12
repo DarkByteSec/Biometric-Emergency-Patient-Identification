@@ -1,9 +1,9 @@
 # PROJECT_MASTER_PLAN.md
 
 **Project:** Biometric Emergency Patient Identification System
-**Document status:** Approved by the project owner on 2026-10-12; repository and migration setup underway
+**Document status:** Approved by the project owner on 2026-10-12; development implementation and migrations completed, hosted app deployment not started
 **Planning date:** 2026-10-12
-**Implementation status:** Repository scaffold and draft SQL migrations are underway. No database migration has been applied, no Supabase project has been provisioned, and no application code or deployment has been created.
+**Implementation status:** Two React + Flask apps are implemented; initial migrations are applied and verified in dedicated Central/Hospital Supabase development projects. No production migration, hosted runtime credentials, or app deployment has been created.
 
 > This is a university prototype for synthetic or otherwise specifically authorized test data. It is not a clinical system, a source of verified identity, or a substitute for clinical judgment. A face match is only a candidate. Blood type displayed from a record is not a transfusion instruction and must never replace laboratory typing and crossmatching.
 
@@ -733,6 +733,25 @@ Before provisioning/deployment, prepare or identify:
 - [ ] Run test matrix, CI security checks and bounded authorized staging penetration tests; fix and retest findings.
 - [ ] Deploy only to the approved environment; configure HTTPS, secrets, logs, monitoring, backups and rollback.
 - [ ] Exercise synthetic-data restore, record actual results, write handover and deletion instructions.
+
+## 25. Implementation status — 2026-10-12
+
+This record supplements the original plan and its historical approval checklist. The user approved the plan, selected separate Central and Hospital development projects in the existing Supabase organization, and explicitly excluded Production from the migration work.
+
+### Delivered and verified
+
+- The repository contains the two independent React + Flask apps, versioned Central/Hospital PostgreSQL migrations, policy checks, environment templates, and setup/security documentation.
+- Supabase `BEPI Central Dev` (`sdkwktvfpuiijysigxlw`) and `Hospital Dev` (`fwsdhwpjatltxlcqodfs`) are active development projects in EU West (Paris). Their respective initial migrations were recorded once as `central_0001_initial` version `20261012090928` and `hospital_0001_initial` version `20261012091049`. All 10 Central and 7 Hospital application tables were introspected; RLS, app-role policies, grants, constraints and indexes were verified. Production (`nbmxjyswsrffsslwrdwf`) was not changed. See `docs/database/SUPABASE_DEV_VERIFICATION.md`.
+- Central supports a synthetic registry, encrypted National IDs, keyed lookup fingerprints, named admin/auditor authentication, scoped Hospital credentials, field-limited lookups, access/audit events, and `patient.enroll` UUID verification.
+- Hospital supports named admin/operator authentication, local scan/event records, manual lookup, local-only OpenCV-contrib LBPH candidate workflows, human confirmation/rejection, and a Central-authorized synthetic enrollment flow. Central never receives sample images.
+- Disposable local PostgreSQL 16 databases executed both migrations. The Central adapter passed local-TLS checks for readiness, login, encrypted record creation, scoped credential issuance, lookup, enrollment verification, not-found logging and access-event reads. The Hospital adapter passed local-TLS checks for readiness, login/session, scan writes, JSONB operational events and scan reads.
+- Central backend: 7 tests pass; Hospital backend: 16 tests pass, including enrollment authorization-gate and private retraining regression cases. Both frontends build successfully. Application lint passes. Both local pgTAP suites pass all five assertions. A disposable installation of the Hospital backend requirements reported OpenCV 4.14.0 with the LBPH contrib API available.
+
+### Not provisioned / remaining scope
+
+- No hosted runtime login roles or connection URLs were provisioned. The application group roles are non-login roles; do not use project-owner credentials. The session `SUPABASE_URL` points to Production and is not an application configuration.
+- No hosted users, synthetic patient rows, samples, biometric images, secrets, or app deployments were created. Local smoke-test rows existed only in disposable local PostgreSQL databases; those databases and temporary runtime logins are cleaned up after validation.
+- Deployment choice, hosted secret storage, rate limiting/monitoring, backup/restore and key-rotation drills, broader integration/penetration testing, formal biometric performance validation, and clinical/regulatory review remain out of scope and incomplete. No phase is considered production-ready based only on a passing build or test suite.
 
 ## References
 

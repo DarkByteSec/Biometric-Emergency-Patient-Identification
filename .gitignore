@@ -36,9 +36,11 @@ instance/
 local-biometric-data/
 training_samples/
 biometric_samples/
+hospital-system/backend/private/
 *.lbph.yml
 *.model.yml
 *.onnx
+*.tsbuildinfo
 
 # OS/editor
 .DS_Store
