@@ -1,0 +1,47 @@
+# Environment and secrets
+.env
+.env.*
+!.env.central.example
+!.env.hospital.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# JavaScript
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Local databases and runtime artifacts
+*.sqlite
+*.sqlite3
+*.db
+*.log
+logs/
+instance/
+
+# Local face data and generated models — never commit patient/biometric data
+local-biometric-data/
+training_samples/
+biometric_samples/
+*.lbph.yml
+*.model.yml
+*.onnx
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
