@@ -28,5 +28,5 @@ No passwords, API keys, database URLs, or other credentials are recorded here.
 ## Application follow-up
 
 - Runtime login roles/connection URLs have not been provisioned; do not use project-owner credentials in app servers.
-- Need application code to use the versioned hosted schemas and assume the non-login runtime role; hosted app login/seed data were not tested or created.
+- Central and Hospital Flask applications are implemented and use their respective versioned schemas through non-superuser PostgreSQL adapters that assume the matching non-login runtime role. Adapter smoke tests passed against disposable local PostgreSQL databases; no hosted runtime login, hosted app authentication, or seed data has been provisioned or tested.
 - The existing sandbox `SUPABASE_URL` points at Production and must not be used for application runtime.
